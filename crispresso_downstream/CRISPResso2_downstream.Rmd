@@ -25,11 +25,19 @@ Download *CRISPResso2_downstream* source files from the CRISPResso2 Github repos
 
 The necessary package dependencies are best installed in a [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) environment.
 
-Use the *crispresso_downstream_env.yml* file to generate a *crispresso_downstream_env* environment:  
+Use one of the *crispresso_downstream_env.yml* files to generate a *crispresso_downstream_env* environment:  
+
+*For local use on Mac OSX systems:*  
 
 ```{r, eval = FALSE}
-conda env create -f crispresso_downstream_env.yml
+conda env create -f crispresso_downstream_env_osx.yml
 ```
+*For use on non-Mac OSX systems:*  
+```{r, eval = FALSE}
+conda env create -f crispresso_downstream_env_non_osx.yml
+```
+
+
 
 The environment contains the following dependencies:  
 ```{r, eval=FALSE}
@@ -65,7 +73,7 @@ All commands must be input from within the *CRISPResso2_downstream* source direc
 
 ## Parameter list
   
-##### Also available by running *Rscript CRISPResso2_downstream_v2.0.37.R -h*  
+##### Also available by running *Rscript crispresso_downstream_v2.0.37.R -h*  
   
 *-c, --crisp_out_dir*: path to folder storing CRISPRessoPooled output directories  
   
