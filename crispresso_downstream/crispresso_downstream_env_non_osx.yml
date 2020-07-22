@@ -1,0 +1,18 @@
+name: crispresso_downstream_env
+channels:
+  - bioconda
+  - r
+  - conda-forge
+  - defaults
+dependencies:
+  - python=2.7.15
+  - r=3.5.1
+  - r-optparse  
+  - r-tidyselect  
+  - r-tidyverse  
+  - r-RColorBrewer  
+  - r-gtable  
+  - r-extrafont  
+  - r-scales  
+  - r-effsize  
+  - r-cowplot
