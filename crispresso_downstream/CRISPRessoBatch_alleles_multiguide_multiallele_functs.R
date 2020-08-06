@@ -216,7 +216,7 @@ get_batch_run_info <- function(run_log_string){
   
   # extract the amplicon names (should be in same order as ref_seqs)
   if(length(ref_seqs) > 1){
-    ref_names <- str_extract(run_log_string[1],"--amplicon_name [[:print:]]{1,} --") %>%
+    ref_names <- str_extract(run_log_string[1],"--amplicon_name [[:alnum:][:punct:]]{1,} --") %>%
       str_remove("--amplicon_name ") %>% str_remove(" --") %>% strsplit(split = ",") %>%
       unlist()
   }else{
@@ -237,7 +237,7 @@ get_batch_run_info <- function(run_log_string){
   
   #get number of guides:
   n_guides <- length(guide_seqs)
-  n_refs <- length(ref_names)
+  n_refs <- length(ref_seqs)
   n_guide_x_refs <- n_guides * n_refs
   
   run_info <- data.frame(guide_seq = rep(guide_seqs, each = n_refs), 
