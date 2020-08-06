@@ -75,7 +75,17 @@ get_option_list <- function(){
     make_option(c("-r", "--ref_seq_csv"), action="store", type = "character", default = "",
                 help="for any OT mode: path to reference and guide sequences csv file (see manual for input files)"),
     make_option(c("-b", "--be_summary_exists"), action="store_true", type = "logical", default = FALSE,
-                help="for OT_only mode: add this flag if BE summaries already exist AND set [-f, -t] if not default")
+                help="for OT_only mode: add this flag if BE summaries already exist AND set [-f, -t] if not default"),
+    
+    make_option(c("-e", "--scale_size_by_editing_freq"), action="store_true", type = "logical", default = FALSE,
+                help="for OT_only mode: add this flag to separate the points in OT % editing scatterplot by size 
+                according to sample read coverage [default FALSE]"),
+    make_option(c("-l", "--low_coverage"), action="store", type = "double", default=1000,
+                help="for OT_only mode with --editing_freq_scale flag: the upper read count cutoff for 
+                \"low-coverage\" amplicons/samples  [default 1000]"),
+    make_option(c("-u", "--high_coverage"), action="store", type = "double", default=10000,
+                help="for OT_only mode with --editing_freq_scale flag: the lower read count cutoff for 
+                \"high-coverage\" amplicons/samples [default 10000]")
   )
   
   return(option_list)
@@ -170,6 +180,9 @@ main <- function() {
   ot_sample_csv <- options$ot_sample_csv
   ref_seq_csv <- options$ref_seq_csv
   be_summary_exists <- options$be_summary_exists
+  scale_size_by_editing_freq <- options$scale_size_by_editing_freq
+  low_coverage <- options$low_coverage
+  high_coverage <- options$high_coverage
   
   #if be_summary_exists and the user wishes to generate OT summaries only, append "BE" to mode
   if(be_summary_exists){
@@ -222,14 +235,16 @@ main <- function() {
   if(grepl("OT", mode)){
     
     #generate off-target editing summary, statistics (t.test) table, and plots
-    summarize_off_targets(mode, ref_seq_csv, ot_sample_csv, percent_freq_cutoff)
+    summarize_off_targets(mode, ref_seq_csv, ot_sample_csv, percent_freq_cutoff,
+                          conversion_nuc_from, conversion_nuc_to,
+                          scale_size_by_editing_freq, low_coverage, high_coverage)
   }
 
   #end run log
   sink()
   
   #remove empty Rplot.pdf if it was generated
-  system("rm Rplot.pdf")
+  system("rm Rplots.pdf")
 }
 
 #call main() and run analysis
