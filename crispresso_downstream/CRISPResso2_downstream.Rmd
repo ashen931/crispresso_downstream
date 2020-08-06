@@ -1,7 +1,7 @@
 ---
 title: CRISPResso2 downstream analysis
 author: Anne Shen
-date: 7/20/2020
+date: 8/05/2020
 output: html_document
 ---
 
@@ -10,12 +10,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 ## Usage
 
-This small suite of tools is compatible with CRISPResso v.2.0.37 and has the following modes:
+This suite of tools is compatible with CRISPResso v.2.0.31- v.2.0.37 and has the following modes:
 
 * **collapse:**  summarize editing results and collapse reads by editing outcomes
 * **BE:**   filter base editing results to exclude likely sequencing or amplification errors
-* **OT:**   visualize potential off-target editing based on CRISPRessoPooled outputs
+* **OT:**   visualize potential off-target editing based on CRISPRessoPooled outputs  
 
+Note that these tools are incompatible with prime editing.  
+
+
+***  
+
+## CRISPResso2_downstream processing  
+
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/crispresso_downstream_schematic.png")
+```
 
 ***
 
@@ -32,7 +42,7 @@ Use one of the *crispresso_downstream_env.yml* files to generate a *crispresso_d
 ```{r, eval = FALSE}
 conda env create -f crispresso_downstream_env_osx.yml
 ```
-*For use on non-Mac OSX systems:*  
+*For use on Unix/Linux systems:*  
 ```{r, eval = FALSE}
 conda env create -f crispresso_downstream_env_non_osx.yml
 ```
@@ -69,6 +79,16 @@ conda deactivate crispresso_downstream_env
 
 All commands must be input from within the *CRISPResso2_downstream* source directory.
 
+***  
+
+## Sample data  
+
+Sample off-target CRISPRessoPooled outputs and analysis inputs from Zeng_et_al.^1^ (https://www.nature.com/articles/s41591-020-0790-y?draft=collection) have been provided in the *Sample_data.zip* file. The input sequences were generated using IDT's rhAMPSeq panels. All sample inputs and outputs provided in this documentation are drawm from the same dataset and analysis.
+
+*Sample_data.zip* contains the ref_seq_csv (1620_ref_seqs_tb.csv) file, the ot_sample_csv (2019_1620_BE_rhAMPSeq_samples.csv) file, and eight CRISPRessoPooled output directories.
+
+^1^Zeng, J., Wu, Y., Ren, C. et al. Therapeutic base editing of human hematopoietic stem cells. Nat Med 26, 535–541 (2020). https://doi.org/10.1038/s41591-020-0790-y
+
 ***
 
 ## Parameter list
@@ -77,7 +97,7 @@ All commands must be input from within the *CRISPResso2_downstream* source direc
   
 *-c, --crisp_out_dir*: path to folder storing CRISPRessoPooled output directories  
   
-*-d, --dataID*: data identifier common to all names of CRISPRessoPooled input amplicons (regular expressions accepted)  
+*-d, --dataID*: data identifier common to all names of CRISPRessoPooled input amplicons ( the name following *"CRISPResso_on_"* ), regular expressions accepted  
   
 *-m, --mode*: analysis modes [default collapse_only]:  
   
@@ -100,13 +120,21 @@ All commands must be input from within the *CRISPResso2_downstream* source direc
   
 *-f, --conversion_nuc_from*:  for any BE mode: the nucleotide targeted by the base editor [default C]  
   
-*-t, --conversion_nuc_to*: for any BE mode: the nucleotide(s) produced by the base editor. If multiple nucleotides, enter all letters without separators (ex. ATCG) [default T] 
+*-t, --conversion_nuc_to*: for any BE mode: the nucleotide(s) produced by the base editor. If multiple nucleotides, enter all letters without separators (ex. ATG) [default T] 
   
 *-s, --ot_sample_csv*: for any OT mode: path to sample csv file (see "Input files" below for details)  
   
 *-r, --ref_seq_csv*: for any OT mode: path to reference and guide sequences csv file (see "Input files" below for details)   
   
-*-b, --be_summary_exists*: for OT_only mode: add this flag if BE summaries already exist AND set [-f, -t] if not default values) [default FALSE]
+*-b, --be_summary_exists*: for OT_only mode: add this flag if BE summaries already exist AND set [-f, -t] if not default values) [default FALSE]  
+  
+*-e, --scale_size_by_editing_freq*: for OT_only mode: add this flag to separate the points in OT % editing scatterplot by size according to sample read coverage [default FALSE]   
+
+*-l, --low_coverage*: for OT_only mode with --editing_freq_scale flag: the upper read count cutoff for "low-coverage" amplicons/samples  [default 1000]  
+  
+*-u, --high_coverage*: for OT_only mode with --editing_freq_scale flag: the lower read count cutoff for "high-coverage" amplicons/samples [default 10000]
+
+
      
   \    
 
@@ -133,19 +161,20 @@ All input files (ref_seqs_csv and ot_sample_csv) should be in the same directory
   \    
   
 ##### Off-target sample csv (*ot_sample_csv*)  
-File linking CRISPRessoPooled output files to biological samples/conditions necessary for off-target analysis (not necessary for *collapse* or *BE* modes). As the off-target visualization tool takes up to **30 samples**, this table may have up to 30 rows (not including headers). 
+File linking CRISPRessoPooled output files to biological samples/conditions necessary for off-target analysis (not necessary for *collapse* or *BE* modes). As the off-target visualization tool takes up to **30 samples**, this table may have up to 30 rows (not including headers). *Input headers exactly as they are shown in the sample table and column descriptions below.*  
   
 ```{r, eval = TRUE, echo=FALSE}
-ot_sample_example <- data.frame( donor = rep(c("Donor1_1", "Donor1_2", "Donor2_1", "Donor2_2"), each = 2),
-            condition = rep(c("mock", "edited"), times = 4),
-            CRISPResso_dir_name = c("20200624_DB0024_S1", "20200624_DB0024_S2", "20200624_DB0024_S3", 
-                                    "20200624_DB0024_S4", "20200624_DB0024_S5", "20200624_DB0024_S6",
-                                    "20200624_DB0024_S7", "20200624_DB0024_S8"),
-            sample_name = c("Donor1_1 mock", "Donor1_1 edit", "Donor1_2 mock", "Donor1_2 edit", 
-                            "Donor2_1 mock", "Donor2_1 edit", "Donor2_2 mock", "Donor2_2 edit"),
-            R_color = rep(c("red", "blue", "orange", "green"), each = 2),
-            R_fill = rep(c("red", "blue", "orange", "green"), each = 2),
-            R_shape = rep(c(1, 16), times = 4))
+ot_sample_example <- data.frame( donor = c(rep("Donor_6", 3), rep("Donor_7", 3), rep("Donor_8", 2)),
+            condition = c( rep(c("mock", "edited", "edited"), times = 2), "mock", "edited"),
+            CRISPResso_dir_name = c("all_merged_EP1116-Mock_S1_mix", "all_merged_BE1116-1620-1x_S2_mix", 
+                                    "all_merged_BE1116-1620-2x_S3_mix", "all_merged_BE1215-1-Mock_S4_mix",
+                                    "all_merged_BE1215-2-1620-1x_S5_mix", "all_merged_BE1215-3-1620-2x_S6_mix",
+                                    "merged_BE0108-1-Mock_S7_mix", "all_merged_BE0108-9-1620-2x_S8_mix"),
+            sample_name = c("Donor_6 mock", "Donor_6 1EP", "Donor_6 2EP", "Donor_7 Mock", 
+                            "Donor_7 1EP", "Donor_7 2EP", "Donor_8 Mock", "Donor_8 2EP"),
+            R_color = c(rep("firebrick1", 3), rep("cornflowerblue", 3), rep("darkgoldenrod1", 2)),
+            R_fill = c(rep("firebrick1", 3), rep("cornflowerblue", 3), rep("darkgoldenrod1", 2)),
+            R_shape = c(rep(c(1, 16, 16), times = 2), 1, 16))
 
 knitr::kable(ot_sample_example)
 ```
@@ -158,7 +187,7 @@ knitr::kable(ot_sample_example)
   
 3. *CRISPResso_dir_name* = names of CRISPRessoPooled output directories following *CRISPRessoPooled_on_*   
   
-4. *sample_name* = sample names to be displayed in off-target output figure (*must include donor names exactly*)    
+4. *sample_name* = sample names to be displayed in off-target output figure (text separated by spaces will be displayed on separate lines in the final figure)   
      
 **Optional aesthetics columns (see options below):**  
   
@@ -191,23 +220,28 @@ knitr::include_graphics("html_images/ggplot2_shapes.png")
   \ 
   
 ##### Off-target reference sequences csv (*ref_seq_csv*)
-File containing the reference amplicon sequence, guide sequence, and PAM sequence for each off-target. The table is very similar to the CRIPSRessoPooled pooled.txt file and is necessary for off-target analysis (not necessary for *collapse* or *BE* modes).  
+File containing the reference amplicon sequence, guide sequence, and PAM sequence for each off-target. The table is very similar to the CRIPSRessoPooled pooled.txt file and is necessary for off-target analysis (not necessary for *collapse* or *BE* modes). Unlike the CRISPRessoPooled pooled.txt file, which allows identification of multiple guides per reference amplicon, the *ref_seq_csv* requires that each guide **must** be in an individual row.  
+*Input headers exactly as they are shown in the sample table and column descriptions below.*  
   
 ```{r, eval = TRUE, echo=FALSE}
 
-ref_seq_example <- data.frame(ot_id = c("1620_OT_0", "1620_OT_1", "1620_OT_2", "1620_OT_3", "1620_OT_4",
-                                        "1620_OT_5"),
-                              amplicon_sequence = c("CTACAAAATTCAAATGC...", "GAAGATAAAATGTCTGGGC...", "TCTGTCTCTCGCTTTGAA...",	"GTATTTGGATTCTCAGCTCA...", "TCCTTTCAAGCAATGGTCAG...", "TCCTTTCAAGCAATGGTCAG..."),	
-                              aligned_guide_seq = c("AGCATCCAGGCCCCAGGAA", "CTGGTCTCAGACTCCAGGAA", "ACAGTCACAGGCTCCAGGAT", "TTTATCACAGCCCCAGGAAA", "ACACTCACAGGCTCCAGAAA", "CTGGCTCACAGGCTCCAGAAA"),
-                              guide_sequence = c("AGCATC-CAGGCCCCAGGAA", "CTGGTCTCAGACTCCAGGAA", "ACAGTCACAGGCTCCAGGAT", "TTTATCACAGCCCCAGGAAA", "ACACTCACAGGCTCCAGAAA", "CTGGCTCACAGGCTCCAGAAA"),
-                              pam = c("TGG", "TGG", "AAG", "GGT", "GGG", "AGG"))
+ref_seq_example <- data.frame(ot_id = c("1620_OT_1", "1620_OT_10", "1620_OT_11", "1620_OT_12", "1620_OT_13",
+                                        "1620_OT_14"),
+                              amplicon_sequence = c("CAGGTAATAACATAGGCCAG...", "GCCCAACCAAATCAATATGA...", 
+                                                    "AGATTTCAAGACAAA...",	"ACACTCATACCTCCCGTTT...", "TCCACAGTCCTTGTACT...",
+                                                    "ACCAGCAGCTGAGAGAAA..."),	
+                              aligned_guide_seq = c("TTTATCACAGGCTCCAGGAA", "TTTGTCACAGTCTTCAGGAA", "TTTATCTAATGCTCCAGGAA",
+                                                    "TGTATGACAGGCTCCGGGAA", "TTGATCACAGGCATCAGGAA", "TTGATCTCAGGCACCAGGAA"),
+                              guide_sequence = c("TTTATCACAGGCTCCAGGAA", "TTTGTCACAGTCTTCAGGAA", "TTTATCTAATGCTCCAGGAA",
+                                                    "TGTATGACAGGCTCCGGGAA", "TTGATCACAGGCATCAGGAA", "TTGATCTCAGGCACCAGGAA"),
+                              pam = c("GGG", "AGG", "AAG", "AAG", "CAG", "CGG"))
 
 knitr::kable(ref_seq_example)
 
 ```
 
 **Input columns:**  
-Each off-target "guide" should be in a separate row regardless of whether they are on the same amplicon. With the exception of ot_id and guide_sequence, all sequences must be uppercase ATCG.
+Each off-target "guide" should be in a separate row regardless of whether they are on the same amplicon. With the exception of ot_id and guide_sequence, all sequences must be uppercase ATG.
   
 1. *ot_id* = off-target names (should match the names in the CRISPRessoPooled pooled.txt file *exactly*)
   
@@ -250,8 +284,8 @@ Table of all collapsed indels across all samples in the CRISPRessoBatch or CRISP
 ```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
 knitr::include_graphics("html_images/Collapsed_allele_tb_screenshot.png")
 ```
-  \  
-  
+  \ 
+
 Columns:  
 
 * *Aligned_Sequence* = example Aligned_Sequence around the quantification window center for one sample (kept as an artifact of CRISPResso output)
@@ -266,11 +300,32 @@ Columns:
   
 * *n_mutated* = number of base pairs modified in substitutions overlapping the quantification window
   
-* *indel* = detailed indel (sorted alphanumerically)
+* *indel* = detailed summary of the indel within the quantification window set in CRISPResso (sorted alphanumerically, notation explained in section below)
   
 * *[run]_reads__[GUIDE_SEQ]* = number of reads of the indel (row) within the sample/CRISPResso run (column)
 
-* *[run]__[GUIDE_SEQ]* = percent frequency of the indel (row) within the sample/CRISPResso run (column)
+* *[run]__[GUIDE_SEQ]* = percent frequency of the indel (row) within the sample/CRISPResso run (column)  
+
+  \  
+  
+ 
+**Indel notation**   
+In the *indel* column, base pair indexes are centered at the beginning of the aligned spacer sequence, with the first base pair of the spacer distal to the PAM counted as 1 (see figure below).  
+```{r, echo=FALSE, fig.cap="", out.width = '80%', fig.align="center"}
+knitr::include_graphics("html_images/indel_index.png")
+```
+
+The summarized mutation notation in the *indel* column, which is consistent in all output files generated by this tool, is as follows:  
+
+* *Substitution:*  (ex. C6T, G10A) the first base pair is the reference nucleotide, the middle number is the base pair index, and the last nucleotide is the aligned nucleotide; C6T means that the C at the 6th bp in the spacer was converted to T  
+
+* *Deletion:*  (ex. -1 (18), -5 (19-23)) the minus indicates a deletion, the number immediately following the minus sign displays the deletion length, and the numbers in the parentheses indicate the bp indexes of the deletion; -1 (18) is a minus one deletion at the 18th bp of the spacer sequence  
+
+* *Insertion:*  (ex. +1 (T 17), +9 (GTTCCAGAG 11-19))) the plus indicates an insertion, the number immediately following the plus sign displays the insertion length, the nucleotides inside the parentheses make up the inserted sequence, and the bp index range following the sequence shows the location of the insertion; +1 (T 17) is a plus one insertion at the 17th bp of the spacer sequence  
+
+While a single allele may multiple substitutions, only one indel (insertion/deletion) is identified within the quantification window as an insertion and a deletion cannot take place at the same site. Each combination of substitutions and single indels are counted as individual alleles (and individual rows in the collapsed allele tables).
+
+
 
   \  
   \ 
@@ -320,7 +375,7 @@ The OT mode performs simple t-test comparing percent editing in edited v. contro
 
 *collapse_BE_OT mode*  
 ```{r eval = FALSE, echo = TRUE}
-Rscript crispresso_downstream_v2.0.37.R -c /Users/local_Jing_BE/1620/20200619_1620_ONESeq_rhAMPSeq_triplicates -p 0 -d 1620 -m collapse_BE_OT -f C -t ATCG -s 20200619_1620_rhAMPSeq_samples.csv -r 1620_ONESeq_ref_seqs.csv --CRISPRessoPooled
+Rscript crispresso_downstream_v2.0.37.R -c /Users/local_Jing_BE/1620/20200619_1620_ONESeq_rhAMPSeq_triplicates -p 0 -d 1620 -m collapse_BE_OT -f C -t ATG -s 20200619_1620_rhAMPSeq_samples.csv -r 1620_ONESeq_ref_seqs.csv --CRISPRessoPooled
 ```
 *collapse_OT mode*  
 ```{r eval = FALSE, echo = TRUE}
@@ -399,11 +454,52 @@ Columns:
   \  
   
 ***off_target_Rplot.png/pdf***  
-Example figure below. The heatmap on the left displays the read coverage per amplicon, per sample. The off-target names and sequences in the center are followed by an **\*** when the editing frequency in edited samples is significantly higher than that in mock/control samples. The editing frequency is displayed in the dotplot on the right.  
+Example figure below. Figures are saved as individual .png files and pages in a single .pdf file.  
+
+The heatmap on the left displays the read coverage per amplicon, per sample. The off-target names and sequences in the center are followed by an **\*** when the editing frequency in edited samples is significantly higher than that in mock/control samples. The editing frequency is displayed in the dotplot on the right.  
   \ 
   
+##### Off-target composite figure details {.tabset}
+
+###### Full plot  
 ```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
-knitr::include_graphics("html_images/20200622_off_targets_CtoT_Rplot_1.png")
+knitr::include_graphics("html_images/composite_off_targets_Rplot_1.png")
 ```
-  \ 
+
+###### Read coverage heatmap (left)  
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/composite_coverage_heatmap_left.png")
+```
+
+###### Editing % dotplot (right)  
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/composite_editing_freq_right.png")
+```
+
+
+#####  \  
  
+***off_target_summary_Rplot.png/pdf***  
+Example figure below. Figures are saved as individual .png files and pages in a single .pdf file.  
+
+The heatmap on the left is the same as that of the (non-summary) figures above. The editing frequency summary statistics are displayed in the dotplot on the right; all mock samples are pooled, and all edited samples are pooled.  
+  
+##### Summary off-target composite figure details {.tabset}
+
+###### Full plot 
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/composite_summary_off_targets_Rplot_1.png")
+```
+
+###### Read coverage heatmap (left)  
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/composite_summary_coverage_heatmap_left.png")
+```
+
+###### Summary Editing % dotplot (right)  
+```{r, echo=FALSE, fig.cap="", out.width = '100%', fig.align="center"}
+knitr::include_graphics("html_images/composite_summary_editing_freq_right.png")
+```
+
+  \ 
+  
