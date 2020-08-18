@@ -94,6 +94,9 @@ get_CRISPRessoBatch_allele_tbs <- function(crispresso2_batch_files,
 
     final_allele_table <- adjust_percent_frequency(final_allele_table, dataID)
     
+    #remove Aligned_Sequence & Reference_Sequence columns
+    final_allele_table <- select(final_allele_table, -c("Aligned_Sequence", "Reference_Sequence"))
+    
     setwd("../") #save summary tables in outer directory
     
     #save allele tables
