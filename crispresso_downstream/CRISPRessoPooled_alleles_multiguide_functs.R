@@ -94,6 +94,9 @@ get_CRISPRessoPooled_allele_tbs <- function(crispresso2_pooled_files,
                                                        dataID, noSub)
     final_allele_table <- adjust_percent_frequency(final_allele_table, dataID)
     
+    #remove Aligned_Sequence & Reference_Sequence columns
+    final_allele_table <- select(final_allele_table, -c("Aligned_Sequence", "Reference_Sequence"))
+    
     setwd("../") #save summary tables in outer directory
     
     #save allele tables
@@ -102,7 +105,7 @@ get_CRISPRessoPooled_allele_tbs <- function(crispresso2_pooled_files,
   
   #end analysis run log
   cat("\n")
-  #sink()
+
 }
 
 
