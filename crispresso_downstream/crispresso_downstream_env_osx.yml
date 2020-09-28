@@ -58,14 +58,18 @@ dependencies:
   - mpc=1.1.0=h4160ff4_1007
   - mpfr=4.0.2=h65ac59c_1
   - ncurses=6.2=hb1e8313_1
-  - openssl=1.1.1g=h0b31af3_0
+  - openjpeg=2.3.1=h254dc36_3
+  - openssl=1.1.1g=haf1e3a3_1
   - pango=1.42.4=haa940fe_4
   - pcre=8.44=h4a8c4bd_0
   - pip=20.1.1=pyh9f0ad1d_0
   - pixman=0.38.0=h01d97ff_1003
+  - poppler=0.87.0=hac18326_0
+  - poppler-data=0.4.9=1
   - python=2.7.15=h8e446fc_1011_cpython
   - python_abi=2.7=1_cp27m
   - r=3.5.1=r351_0
+  - r-askpass=1.1=r35h17f1fa6_1
   - r-assertthat=0.2.0=r351hf348343_0
   - r-backports=1.1.2=r351h6402f54_0
   - r-base=3.5.1=hc03ab29_1012
@@ -75,6 +79,7 @@ dependencies:
   - r-bindrcpp=0.2.2=r351h32998d9_0
   - r-boot=1.3_20=r351hf348343_0
   - r-broom=0.5.0=r351hf348343_0
+  - r-cairo=1.5_9=r351h6402f54_1
   - r-callr=2.0.4=r351hf348343_0
   - r-cellranger=1.1.0=r351hf348343_0
   - r-class=7.3_14=r351h6402f54_4
@@ -127,6 +132,7 @@ dependencies:
   - r-nnet=7.3_12=r351h6402f54_0
   - r-openssl=1.0.2=r351h46e59ec_1
   - r-optparse=1.6.6=r35h6115d3f_0
+  - r-pdftools=2.3=r35h694cfd5_1
   - r-pillar=1.3.0=r351hf348343_0
   - r-pkgconfig=2.0.1=r351hf348343_0
   - r-plogr=0.2.0=r351hf348343_0
@@ -134,6 +140,7 @@ dependencies:
   - r-praise=1.0.0=r351hf348343_4
   - r-processx=3.1.0=r351h32998d9_0
   - r-purrr=0.2.5=r351h6402f54_0
+  - r-qpdf=1.1=r35hf99fc2c_1
   - r-r6=2.2.2=r351hf348343_0
   - r-rcolorbrewer=1.1_2=r351hf348343_0
   - r-rcpp=0.12.18=r351h32998d9_0
@@ -156,6 +163,7 @@ dependencies:
   - r-stringi=1.4.6=r35h3211bb2_1
   - r-stringr=1.3.1=r351hf348343_0
   - r-survival=2.42_6=r351h6402f54_0
+  - r-sys=3.3=r35h17f1fa6_0
   - r-testthat=2.0.0=r351h32998d9_0
   - r-tibble=1.4.2=r351h6402f54_0
   - r-tidyr=0.8.1=r351h32998d9_0
@@ -179,5 +187,5 @@ dependencies:
   - xz=5.2.5=h0b31af3_1
   - zlib=1.2.11=h0b31af3_1006
   - zstd=1.4.5=h0384e3a_1
-prefix: /Users/anneshen/anaconda3/envs/crispresso_downstream_env
+
 
