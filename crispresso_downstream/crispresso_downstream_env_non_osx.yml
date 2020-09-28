@@ -16,3 +16,5 @@ dependencies:
   - r-scales  
   - r-effsize  
   - r-cowplot
+  - r-pdftools 
+  - r-cairo
