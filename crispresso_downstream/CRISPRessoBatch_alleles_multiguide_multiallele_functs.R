@@ -144,7 +144,7 @@ get_batch_allele_frequency_table <- function(crisp_out_dir, sample_dirs_list, pe
   
   ### 1. Loops through directories in sample_dirs_list and compiles allele frequency data from all #########
   ### CRISPResso2 samples into one data frame for organization. ############################################
-  for(sample_dir in sample_dirs_list){ #loop through directories in sample_dirs_list
+  for(sample_dir in sample_dirs_list){ #loop through directories (CRISPResso_on_ directories) in sample_dirs_list 
     
     setwd(sample_dir) #set working directory to sample_dir to access the reference allele .txt file
     cat(sample_dir, "\n")
@@ -768,9 +768,9 @@ get_insertion_summary <- function(ranking_table, n, cut_minus1, cut_index_adjust
 # ARGUMENTS: ranking_table = data table containing all allele frequency data compiled from all
 #                            CRISPResso2 samples
 #            n = ranking_table row number (allele row) generated in get_indel_columns() for loop
-#            cut_index_adjustment = the number to subtract from the insertion bp indices to 
-#                                        get the cut index centered at sgRNA, PAM-distal 17-18
-#                                        for heatmap labels
+#            cut_index_adjustment = the number to subtract from the substitution bp indices to 
+#                                        get the cut index centered at sgRNA cut site, starting from PAM-distal
+#                                        end for heatmap labels
 # OUTPUT: string of substitution summary ex. "T21C"
 get_substitution_summary <- function(ranking_table, n, cut_minus1, cut_index_adjustment, ref_seq, q_window, q_window_start, q_window_end){
   
@@ -791,7 +791,7 @@ get_substitution_summary <- function(ranking_table, n, cut_minus1, cut_index_adj
                                   #use the adjusted bp indices for label 
                                   as.character(i + q_window_start -1 - cut_index_adjustment), 
                                   align_qw[i], sep = ""),
-                            sep = " ") #HERE
+                            sep = " ")
     }
   }
   return(substitution)
