@@ -14,12 +14,15 @@ suppressPackageStartupMessages(library(extrafont))
 suppressPackageStartupMessages(library(scales))
 suppressPackageStartupMessages(library(effsize))
 suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(Cairo))
+suppressPackageStartupMessages(library(pdftools))
 
 # "grid" is not found in anaconda
 if (!require("grid", character.only = TRUE)) {
   install.packages("grid", dependencies = TRUE)
 }
 suppressPackageStartupMessages(library(grid))
+
 
 #turn off scientific notation
 options(scipen=999)
@@ -34,33 +37,41 @@ get_option_list <- function(){
     #mandatory inputs
     make_option(c("-c", "--crisp_out_dir"), action="store", type = "character",
                 help="path to folder storing CRISPRessoPooled output directories"),
-    make_option(c("-d", "--dataID"), action="store", type = "character", default = NULL,
-                help="data identifier common to all names of CRISPRessoPooled input amplicons (regular expressions accepted)"),
-    
-    
+
     #optional inputs (with default settings)
-    make_option(c("-m", "--mode"), action="store", type = "character", default = "collapse_only",
-                help="analysis modes [default collapse_only]:\n
-                \t collapse_only = generate collapsed allele table only \n
-                \t collapse_BE = generate collapsed allele table & base editing summary (requires BE parameters) \n
-                \t collapse_OT = generate collapsed allele table & off-target summary (requires OT parameters) \n
-                \t collapse_BE_OT = generate collapsed allele table, base editing summary, and off-target summary 
-                \t (requires BE and OT parameters) \n
-                \t BE_OT = generates base editing and off-target summary 
-                \t (requires BE parameters, OT parameters, and collapsed allele tables) \n
-                \t BE_only = generates base editing summary (requires BE parameters and collapsed allele tables) \n
-                \t OT_only = generates off-target summary (requires OT parameters and collapsed allele tables)"),
+    make_option(c("-m", "--mode"), action="store", type = "character", default = "collapse",
+                help="Available analysis modes. Multiple modes may be combined, each separated by an underscore. For example, collapse_BE_OT 
+                would include the collapse, BE, and OT modes. The order of the modes MUST be in the order they are presented below, such as 
+                BE_UT and not OT_BE. [default collapse]:\n
+                \t collapse = generate collapsed allele table \n
+                \t BE = generate base editing summary (requires BE parameters) \n
+                \t OT = generate off-target summary (requires OT parameters) \n
+                \t UT = generate updated allele table figures (requires UT parameters) \n"),
+                
+                # \t collapse_only = generate collapsed allele table only \n
+                # \t collapse_BE = generate collapsed allele table & base editing summary (requires BE parameters) \n
+                # \t collapse_OT = generate collapsed allele table & off-target summary (requires OT parameters) \n
+                # \t collapse_BE_OT = generate collapsed allele table, base editing summary, and off-target summary 
+                # \t (requires BE and OT parameters) \n
+                # \t BE_OT = generates base editing and off-target summary 
+                # \t (requires BE parameters, OT parameters, and collapsed allele tables) \n
+                # \t BE_only = generates base editing summary (requires BE parameters and collapsed allele tables) \n
+                # \t OT_only = generates off-target summary (requires OT parameters and collapsed allele tables)"),
+    
+    make_option(c("--CRISPRessoBatch"), action="store_true", type = "logical", default = FALSE,
+                help="for all modes: Use CRISPRessoBatch files as inputs"),
+    make_option(c("--CRISPRessoPooled"), action="store_true", type = "logical", default = FALSE,
+                help="for all modes: Use CRISPRessoPooled files as inputs"),
     make_option(c("-p", "--percent_freq_cutoff"), action="store", type = "double", default=0,
-                help="minimum frequency an allele must appear in any sample/amplicon to be
+                help="for all modes: minimum frequency an allele must appear in any sample/amplicon to be
                 included in the collapsed output table [default %default]"),
+    make_option(c("-d", "--dataID"), action="store", type = "character", default = NULL,
+                help="for all modes: data identifier common to all names of CRISPRessoPooled/CRISPRessoBatch input amplicons, which 
+                follow \"CRISPResso_on_\" (regular expressions accepted)"),
     
     #collapse-mode specific inputs
-    make_option(c("--CRISPRessoBatch"), action="store_true", type = "logical", default = FALSE,
-                help="for any collapse mode: Use CRISPRessoBatch files as inputs"),
-    make_option(c("--CRISPRessoPooled"), action="store_true", type = "logical", default = FALSE,
-                help="for any collapse mode: Use CRISPRessoPooled files as inputs"),
     make_option(c("-n", "--noSub"), action="store_true", type = "logical", default = FALSE,
-                help="do not include substitutions as edits in output table [default FALSE]"),
+                help=" for any collapse mode: do not include substitutions as edits in output table [default FALSE]"),
     
     #BE-mode specific inputs
     make_option(c("-f", "--conversion_nuc_from"), action="store", type = "character", default = "C",
@@ -68,7 +79,6 @@ get_option_list <- function(){
     make_option(c("-t", "--conversion_nuc_to"), action="store", type = "character", default = "T",
                 help="for any BE mode: the nucleotide(s) produced by the base editor. If multiple nucleotides, 
                 enter all letters without separators (ex. ATCG) [default T]"),
-    
     make_option(c("-b", "--base_edit_window"), action="store", type = "character", default="3-10",
                 help="for any BE mode: quantification window range (joined by a hyphen) for base editing conversions 
                 within the spacer/guide sequence; the first base pair of the guide sequence is 1 [default 3-10]"),
@@ -81,8 +91,6 @@ get_option_list <- function(){
                 help="for any OT mode: path to sample csv file (see manual for input files)"),
     make_option(c("-r", "--ref_seq_csv"), action="store", type = "character", default = "",
                 help="for any OT mode: path to reference and guide sequences csv file (see manual for input files)"),
-    make_option(c("-B", "--be_summary_exists"), action="store_true", type = "logical", default = FALSE,
-                help="for OT_only mode: add this flag if BE summaries already exist AND set [-f, -t] if not default"),
     make_option(c("-v", "--sort_by_pval"), action="store_true", type = "logical", default = FALSE,
                 help="for any OT mode: sort off-targets by t-test p-value instead of off-target 
                 names in composite figures [default FALSE]"),
@@ -95,7 +103,16 @@ get_option_list <- function(){
                 \"low-coverage\" amplicons/samples  [default 1000]"),
     make_option(c("-u", "--high_coverage"), action="store", type = "double", default=10000,
                 help="for any OT mode with --editing_freq_scale flag: the lower read count cutoff for 
-                \"high-coverage\" amplicons/samples [default 10000]")
+                \"high-coverage\" amplicons/samples [default 10000]"),
+    make_option(c("-B", "--be_summary_exists"), action="store_true", type = "logical", default = FALSE,
+                help="for OT and/or UT mode: add this flag if BE summaries already exist AND set [-f, -t] if not default"),
+    make_option(c("-C", "--collapsed_summary_exists"), action="store_true", type = "logical", default = FALSE,
+                help="for OT and/or UT mode: add this flag if collapsed allele tables already exist"),
+  
+    #UT-mode specific inputs
+    make_option(c("-U", "--updated_allele_tb_csv"), action="store", type = "character", default=NULL,
+                help="for UT mode: path and file name to table containing CRISPRessoBatch/Pooled runs for which to generate updated/collapsed
+                allele tables (see manual for input files)")
   )
   
   return(option_list)
@@ -106,8 +123,11 @@ get_option_list <- function(){
 #if options$crisp_out_dir exists, set working directory to options$crisp_out_dir
 check_options <- function(options){
   
-  valid_modes <- c("collapse_only", "collapse_BE", "collapse_OT", "collapse_BE_OT", 
-                   "BE_OT", "BE_only", "OT_only")
+  valid_modes <- c("collapse", "collapse_BE", "collapse_OT", "collapse_UT", "collapse_BE_OT", "collapse_BE_UT", "collapse_OT_UT",
+                   "collapse_BE_OT_UT", 
+                   "BE","BE_OT", "BE_UT", 
+                   "OT", "OT_UT",
+                   "UT")
   
   #stop if mode is not a valid option
   if (! options$mode %in% valid_modes) { 
@@ -146,6 +166,12 @@ check_options <- function(options){
   if(is.null(options$dataID)){
     stop("dataID missing.", call.=FALSE)
   }
+  
+  #check if updated_allele_tb_csv file exists
+  #stop if running OT analysis and the ot_sample_csv does not exist
+  if(grepl("UT", options$mode) & !file.exists(options$updated_allele_tb_csv)){
+    stop("updated_allele_tb_csv [-U] does not exist.", call.=FALSE)
+  }
 }
 
 
@@ -157,6 +183,7 @@ main <- function() {
   source("CRISPResso_BE_analysis_functs.R")
   source("Summarize_off-target_editing_functs.R")
   source("CRISPRessoBatch_alleles_multiguide_multiallele_functs.R")
+  source("CRISPResso_allele_table_functs.R")
   #load extrafonts
   loadfonts()
   
@@ -183,6 +210,7 @@ main <- function() {
   noSub <- options$noSub
   crispressoBatch <- options$CRISPRessoBatch
   crispressoPooled <- options$CRISPRessoPooled
+  updated_allele_tb_csv <- options$updated_allele_tb_csv
   #BE-specific inputs
   conversion_nuc_from <- options$conversion_nuc_from
   conversion_nuc_to <- options$conversion_nuc_to
@@ -191,11 +219,19 @@ main <- function() {
   #OT-specific inputs
   ot_sample_csv <- options$ot_sample_csv
   ref_seq_csv <- options$ref_seq_csv
-  be_summary_exists <- options$be_summary_exists
   sort_by_pval <- options$sort_by_pval
   scale_size_by_editing_freq <- options$scale_size_by_editing_freq
   low_coverage <- options$low_coverage
   high_coverage <- options$high_coverage
+  be_summary_exists <- options$be_summary_exists
+  collapsed_summary_exists <- options$collapsed_summary_exists
+  #UT-specific inputs
+  updated_allele_tb_csv <- options$updated_allele_tb_csv
+  
+  #if be_summary_exists and the user wishes to generate OT summaries only, append "BE" to mode
+  if(collapsed_summary_exists){
+    mode <- paste("collapse", mode, sep = "_")
+  }
   
   #if be_summary_exists and the user wishes to generate OT summaries only, append "BE" to mode
   if(be_summary_exists){
@@ -207,7 +243,7 @@ main <- function() {
   cat("Begin CRISPResso downstream analysis...\n\n")
   
   #if mode includes generating collapsed allele tables
-  if(grepl("collapse", mode)){ 
+  if(grepl("collapse", mode) & !collapsed_summary_exists){ 
     
     if(crispressoPooled){
       #get list of CRISPRessoPooled output directories
@@ -232,7 +268,7 @@ main <- function() {
   }
   
   #if mode includes generating BE summary tables
-  if(grepl("BE", mode)  & ! grepl("BE_OT_only", mode) ){
+  if(grepl("BE", mode)  & !be_summary_exists ){
     
     #get list of collapsed allele tables
     summary_files <- grep(paste("collapsed_", percent_freq_cutoff, ".csv", sep = ""),
@@ -252,6 +288,14 @@ main <- function() {
     summarize_off_targets(mode, ref_seq_csv, ot_sample_csv, percent_freq_cutoff,
                           conversion_nuc_from, conversion_nuc_to, sort_by_pval,
                           scale_size_by_editing_freq, low_coverage, high_coverage)
+  }
+  
+  #if mode includes generating UT (updated allele tables)
+  if(grepl("UT", mode)){
+    
+    #generate updated allele tables 
+    generate_updated_allele_tables(updated_allele_tb_csv, mode, percent_freq_cutoff, 
+                                   conversion_nuc_from, conversion_nuc_to, crispressoPooled)
   }
 
   #end run log
